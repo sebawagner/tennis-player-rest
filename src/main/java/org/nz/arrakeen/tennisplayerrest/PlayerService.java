@@ -18,7 +18,7 @@ public class PlayerService {
 
     //method to return all players
     public List<Player> getAllPlayers() {
-        return repo.findAll();
+        return repo.findAllOrderedById();
     }
 
     //method to find player by id
