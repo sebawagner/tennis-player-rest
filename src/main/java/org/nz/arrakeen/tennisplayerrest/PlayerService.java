@@ -34,7 +34,8 @@ public class PlayerService {
 
         //if value is not found, throw a runtime exception
         else
-            throw new RuntimeException("Player with id "+ id + " not found.");
+            throw new PlayerNotFoundException("Player with id "+ id + " not found.");
+
 
         return p;
     }
@@ -63,6 +64,8 @@ public class PlayerService {
         //if the Optional has a value, assign it to p
         if(tempPlayer.isPresent())
             player = tempPlayer.get();
+        else
+            throw new PlayerNotFoundException("Player with id "+ id + " not found.");
 
         //update player information in database
         player.setName(p.getName());
@@ -85,6 +88,8 @@ public class PlayerService {
                 ReflectionUtils.makeAccessible(field);
                 ReflectionUtils.setField(field, player.get(), value);
             });
+        } else {
+            throw new PlayerNotFoundException("Player with id " + id + " not found.");
         }
         return repo.save(player.get());
     }
@@ -92,5 +97,17 @@ public class PlayerService {
     @Transactional
     public void updateTitles(int id, int titles) {
         repo.updateTitles(id, titles);
+    }
+
+    //delete a player
+    public String deletePlayer(int id) {
+        Optional<Player> tempPlayer = repo.findById(id);
+
+        if(tempPlayer.isEmpty()) {
+            throw new PlayerNotFoundException("Player with id "+ id + " not found.");
+        }
+
+        repo.delete(tempPlayer.get());
+        return "Player with id "+ id +" deleted";
     }
 }

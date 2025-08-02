@@ -1,6 +1,8 @@
 package org.nz.arrakeen.tennisplayerrest;
 
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.http.HttpStatus;
+import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
@@ -28,13 +30,26 @@ public class PlayerController {
     }
 
     @PostMapping("/players")
-    public Player addPlayer(@RequestBody Player player) {
-        return service.addPlayer(player);
+    public ResponseEntity<Player> addPlayer(@RequestBody Player player) {
+        Player newPlayer = service.addPlayer(player);
+        return new ResponseEntity<>(newPlayer, HttpStatus.CREATED);
     }
 
     @PutMapping("/players/{id}")
-    public Player updatePlayer(@RequestBody Player player, @PathVariable int id) {
-        return service.updatePlayer(id, player);
+    public ResponseEntity<?> updatePlayer(@RequestBody Player player, @PathVariable int id) {
+        // Validate that all required fields are present
+        if (player.getName() == null || player.getName().trim().isEmpty() ||
+            player.getNationality() == null || player.getNationality().trim().isEmpty() ||
+            player.getBirthDate() == null ||
+            player.getTitles() < 0) {
+
+            return new ResponseEntity<>("All player attributes (name, nationality, birthDate, titles) must be provided and valid",
+                                       HttpStatus.BAD_REQUEST);
+        }
+
+        // If validation passes, proceed with the update
+        Player updatedPlayer = service.updatePlayer(id, player);
+        return new ResponseEntity<>(updatedPlayer, HttpStatus.OK);
     }
 
     @PatchMapping("/players/{id}")
@@ -45,6 +60,11 @@ public class PlayerController {
     @PatchMapping("/players/{id}/titles")
     public void updateTitles(@PathVariable int id, @RequestBody int titles) {
         service.updateTitles(id, titles);
+    }
+
+    @DeleteMapping("/players/{id}")
+    public String deletePlayer(@PathVariable int id) {
+        return service.deletePlayer(id);
     }
 
 }
