@@ -50,6 +50,9 @@ public class PlayerService {
             p.getBirthDate(),
             p.getTitles()
         );
+        if (p.getPlayerProfile() != null) {
+            player.setPlayerProfile(p.getPlayerProfile());
+        }
         // Let JPA/Hibernate handle the ID generation
         return repo.save(player);
     }
