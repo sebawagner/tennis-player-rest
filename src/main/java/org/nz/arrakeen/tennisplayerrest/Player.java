@@ -4,10 +4,7 @@ import java.sql.Date;
 
 import com.fasterxml.jackson.annotation.JsonFormat;
 
-import jakarta.persistence.Entity;
-import jakarta.persistence.GeneratedValue;
-import jakarta.persistence.GenerationType;
-import jakarta.persistence.Id;
+import jakarta.persistence.*;
 
 @Entity
 public class Player {
@@ -23,6 +20,10 @@ public class Player {
 
     private int titles;
 
+    @OneToOne(cascade= CascadeType.ALL)
+    @JoinColumn(name="profile_id", referencedColumnName="id")
+    private PlayerProfile playerProfile;
+
     public Player() {
 
     }
@@ -34,6 +35,16 @@ public class Player {
         this.birthDate = birthDate;
         this.titles = titles;
     }
+
+    public Player(String name, String nationality, Date birthDate, int titles, PlayerProfile profile) {
+        super();
+        this.name = name;
+        this.nationality = nationality;
+        this.birthDate = birthDate;
+        this.titles = titles;
+        this.playerProfile = profile;
+    }
+
     public int getId() {
         return id;
     }
