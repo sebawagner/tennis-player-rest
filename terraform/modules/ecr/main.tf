@@ -1,4 +1,9 @@
+data "aws_ecr_repository" "existing_repo" {
+  name = var.repository_name
+}
+
 resource "aws_ecr_repository" "repo" {
+  count                = var.create_repository ? 1 : 0
   name                 = var.repository_name
   image_tag_mutability = "MUTABLE"
 
@@ -11,7 +16,7 @@ resource "aws_ecr_repository" "repo" {
 
 # Add a lifecycle policy to manage image retention
 resource "aws_ecr_lifecycle_policy" "repo_policy" {
-  repository = aws_ecr_repository.repo.name
+  repository = var.create_repository ? aws_ecr_repository.repo[0].name : data.aws_ecr_repository.existing_repo.name
 
   policy = jsonencode({
     rules = [

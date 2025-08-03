@@ -6,6 +6,7 @@ module "ecr" {
   source = "./modules/ecr"
 
   repository_name = var.ecr_repository_name
+  create_repository = false  # Set to false since the repository already exists
   tags            = var.tags
 }
 

@@ -35,23 +35,25 @@ COPY --from=build ${DEPENDENCY}/BOOT-INF/classes /app
 # Copy New Relic config file from resources to agent directory
 COPY --from=build ${DEPENDENCY}/BOOT-INF/classes/newrelic.yml /opt/newrelic/
 
-# Add debug script to verify New Relic configuration at startup
-RUN echo '#!/bin/bash \n\
-echo "========== DEBUGGING NEW RELIC CONFIGURATION ==========" \n\
-echo "Checking New Relic installation and config:" \n\
-ls -la /opt/newrelic \n\
-echo "\\nContents of newrelic.yml file:" \n\
-cat /opt/newrelic/newrelic.yml \n\
-echo "\\nChecking for production section in newrelic.yml:" \n\
-grep -A 5 "production:" /opt/newrelic/newrelic.yml \n\
-echo "\\nEnvironment variables:" \n\
-echo "NEW_RELIC_APP_NAME: $NEW_RELIC_APP_NAME" \n\
-echo "NEW_RELIC_LOG_LEVEL: $NEW_RELIC_LOG_LEVEL" \n\
-echo "NEW_RELIC_LICENSE_KEY: [hidden for security]" \n\
-echo "\\nStarting application with New Relic agent..." \n\
-echo "==========================================================" \n\
-exec java -javaagent:/opt/newrelic/newrelic.jar -cp app:app/lib/* org.nz.arrakeen.tennisplayerrest.TennisPlayerRestApplication \n\
-' > /entrypoint.sh && chmod +x /entrypoint.sh
+# Create a proper startup script
+RUN echo '#!/bin/bash' > /start.sh && \
+    echo 'echo "========== DEBUGGING NEW RELIC CONFIGURATION ==========="' >> /start.sh && \
+    echo 'echo "Checking New Relic installation and config:"' >> /start.sh && \
+    echo 'ls -la /opt/newrelic' >> /start.sh && \
+    echo 'echo ""' >> /start.sh && \
+    echo 'echo "Contents of newrelic.yml file:"' >> /start.sh && \
+    echo 'cat /opt/newrelic/newrelic.yml' >> /start.sh && \
+    echo 'echo ""' >> /start.sh && \
+    echo 'echo "Checking for production section in newrelic.yml:"' >> /start.sh && \
+    echo 'grep -A 5 "production:" /opt/newrelic/newrelic.yml || echo "production section not found"' >> /start.sh && \
+    echo 'echo ""' >> /start.sh && \
+    echo 'echo "Environment variables:"' >> /start.sh && \
+    echo 'echo "NEW_RELIC_APP_NAME: $NEW_RELIC_APP_NAME"' >> /start.sh && \
+    echo 'echo "NEW_RELIC_LOG_LEVEL: $NEW_RELIC_LOG_LEVEL"' >> /start.sh && \
+    echo 'echo "NEW_RELIC_LICENSE_KEY: [hidden for security]"' >> /start.sh && \
+    echo 'echo ""' >> /start.sh && \
+    echo 'echo "Starting application with New Relic agent..."' >> /start.sh && \
+    echo 'java -javaagent:/opt/newrelic/newrelic.jar -cp app:app/lib/* org.nz.arrakeen.tennisplayerrest.TennisPlayerRestApplication' >> /start.sh && \
+    chmod +x /start.sh
 
-# Use the debug entrypoint script
-ENTRYPOINT ["/entrypoint.sh"]
+ENTRYPOINT ["/start.sh"]
