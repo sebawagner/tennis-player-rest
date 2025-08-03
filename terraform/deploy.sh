@@ -41,15 +41,22 @@ echo -e "  ${BOLD}AWS_SESSION_TOKEN${NC} - Your AWS session token (if using temp
 
 # Parse command-line arguments
 DEPLOY_ECS=false
+NEW_RELIC_LICENSE_KEY=""
+
 while [[ "$#" -gt 0 ]]; do
     case $1 in
         --ecs) DEPLOY_ECS=true ;;
+        --new-relic-key)
+            NEW_RELIC_LICENSE_KEY="$2"
+            shift
+            ;;
         --help)
             echo -e "\n${BOLD}Usage:${NC}"
             echo -e "  ./deploy.sh [OPTIONS]"
             echo -e "\n${BOLD}Options:${NC}"
-            echo -e "  --ecs    Deploy both ECR and ECS (Fargate service with load balancer)"
-            echo -e "  --help   Show this help message"
+            echo -e "  --ecs                 Deploy both ECR and ECS (Fargate service with load balancer)"
+            echo -e "  --new-relic-key KEY   Set the New Relic license key for APM monitoring"
+            echo -e "  --help                Show this help message"
             exit 0
             ;;
         *) echo "Unknown parameter: $1"; exit 1 ;;
@@ -87,10 +94,22 @@ terraform init
 # Create appropriate variable file based on whether ECS is being deployed
 if [ "$DEPLOY_ECS" = true ]; then
     echo -e "\n${BOLD}${BLUE}Deploying both ECR repository and ECS Fargate service...${NC}"
+
+    # Create tfvars file with New Relic license key if provided
+    if [ -n "$NEW_RELIC_LICENSE_KEY" ]; then
+        echo "new_relic_license_key = \"$NEW_RELIC_LICENSE_KEY\"" > terraform.tfvars
+        echo -e "${GREEN}Using provided New Relic license key for deployment${NC}"
+    fi
 else
     echo -e "\n${BOLD}${BLUE}Deploying ECR repository only...${NC}"
     # Create a temporary tfvars file to disable ECS deployment
     echo 'desired_count = 0' > terraform.tfvars
+
+    # Add New Relic license key if provided
+    if [ -n "$NEW_RELIC_LICENSE_KEY" ]; then
+        echo "new_relic_license_key = \"$NEW_RELIC_LICENSE_KEY\"" >> terraform.tfvars
+        echo -e "${GREEN}Using provided New Relic license key for deployment${NC}"
+    fi
 fi
 
 # Plan the deployment
@@ -103,7 +122,7 @@ read -r confirm
 if [[ $confirm != "y" && $confirm != "Y" ]]; then
     echo -e "\n${RED}Deployment cancelled.${NC}"
     # Clean up temporary tfvars if created
-    [ "$DEPLOY_ECS" = false ] && rm -f terraform.tfvars
+    rm -f terraform.tfvars
     exit 0
 fi
 
@@ -112,7 +131,7 @@ echo -e "\n${BOLD}Applying deployment plan...${NC}"
 terraform apply tfplan
 
 # Clean up temporary tfvars if created
-[ "$DEPLOY_ECS" = false ] && rm -f terraform.tfvars
+rm -f terraform.tfvars
 
 # Print outputs after successful deployment
 echo -e "\n${BOLD}${GREEN}Deployment completed successfully!${NC}"

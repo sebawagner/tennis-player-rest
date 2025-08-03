@@ -1,0 +1,54 @@
+##############################################################
+# New Relic Java Agent Configuration File
+##############################################################
+
+# This section is for common settings used by all environments
+common: &default_settings
+  # Required license key associated with your New Relic account
+  license_key: YOUR_NEW_RELIC_LICENSE_KEY
+
+  # Your application name
+  app_name: Tennis Player Rest API
+
+  # Log level - options: off, severe, warning, info, fine, finer, finest
+  log_level: info
+
+  # Transaction tracer settings
+  transaction_tracer:
+    enabled: true
+    transaction_threshold: 0.5
+    record_sql: obfuscated
+    explain_threshold: 0.5
+
+  # Error collector settings
+  error_collector:
+    enabled: true
+    ignore_status_codes: 404
+
+  # Analytics events settings
+  analytics_events:
+    enabled: true
+    max_samples_stored: 10000
+
+  # Browser monitoring settings
+  browser_monitoring:
+    auto_instrument: true
+
+  # Distributed tracing settings
+  distributed_tracing:
+    enabled: true
+
+# Environment-specific settings - DON'T REMOVE THIS SECTION
+production:
+  <<: *default_settings
+  # Any production-specific overrides go here
+
+# Development environment settings (optional)
+development:
+  <<: *default_settings
+  app_name: Tennis Player Rest API (Dev)
+
+# Test environment settings (optional)
+test:
+  <<: *default_settings
+  app_name: Tennis Player Rest API (Test)

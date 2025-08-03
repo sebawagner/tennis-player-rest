@@ -29,6 +29,9 @@ dependencies {
     // SpringDoc OpenAPI
     implementation 'org.springdoc:springdoc-openapi-starter-webmvc-ui:2.3.0'
 
+    // New Relic APM Agent
+    implementation 'com.newrelic.agent.java:newrelic-api:7.11.1'
+
     developmentOnly 'org.springframework.boot:spring-boot-devtools'
     runtimeOnly 'com.h2database:h2'
     testImplementation 'org.springframework.boot:spring-boot-starter-test'

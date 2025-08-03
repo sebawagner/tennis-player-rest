@@ -19,6 +19,9 @@ Swagger: http://localhost:8080/swagger-ui/index.html
 # Deploy both ECR and ECS with Fargate
 ./deploy.sh --ecs
 
+# Deploy both ECR and ECS with Fargate and New Relic monitoring
+./terraform/deploy.sh --ecs --new-relic-key "your-actual-new-relic-license-key"
+
 # Show help information
 ./deploy.sh --help
 

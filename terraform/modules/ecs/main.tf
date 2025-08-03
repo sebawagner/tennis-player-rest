@@ -291,6 +291,20 @@ resource "aws_ecs_task_definition" "tennis_player" {
           protocol      = "tcp"
         }
       ]
+      environment = [
+        {
+          name  = "NEW_RELIC_APP_NAME"
+          value = "Tennis Player Rest API"
+        },
+        {
+          name  = "NEW_RELIC_LICENSE_KEY"
+          value = var.new_relic_license_key != "" ? var.new_relic_license_key : "YOUR_NEW_RELIC_LICENSE_KEY"
+        },
+        {
+          name  = "NEW_RELIC_LOG_LEVEL"
+          value = "info"
+        }
+      ]
       logConfiguration = {
         logDriver = "awslogs"
         options = {

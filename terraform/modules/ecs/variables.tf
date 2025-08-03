@@ -44,3 +44,10 @@ variable "tags" {
   type        = map(string)
   default     = {}
 }
+
+variable "new_relic_license_key" {
+  description = "New Relic License Key for APM monitoring"
+  type        = string
+  default     = ""
+  sensitive   = true
+}
