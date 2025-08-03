@@ -45,3 +45,166 @@ tasks.named('asciidoctor') {
     inputs.dir snippetsDir
     dependsOn test
 }
+
+// Docker build task - complete rewrite using safer approach
+task buildDockerImage {
+    group = 'docker'
+    description = 'Builds the Docker image for the application'
+
+    dependsOn bootJar
+
+    // Store project properties at configuration time
+    def imageTag = "${project.group}/${rootProject.name}:${project.version}"
+    def jarFile = tasks.bootJar.archiveFile.get().asFile
+
+    doLast {
+        println "Building Docker image: ${imageTag}"
+
+        // Create a new ProcessBuilder for better control
+        def processBuilder = new ProcessBuilder('docker', 'build', '-t', imageTag, '.')
+        processBuilder.directory(projectDir)
+        processBuilder.inheritIO() // Show output in console
+
+        // Start the process and wait for it to complete
+        def process = processBuilder.start()
+        def exitCode = process.waitFor()
+
+        if (exitCode != 0) {
+            throw new GradleException("Docker build failed with exit code ${exitCode}")
+        }
+
+        println "Docker image built successfully: ${imageTag}"
+    }
+}
+
+// Docker push task
+task pushDockerImage(type: Exec) {
+    group = 'docker'
+    description = 'Pushes the Docker image to a repository'
+
+    dependsOn buildDockerImage
+
+    // Store project properties as task properties
+    def imageTag = "${project.group}/${rootProject.name}:${project.version}"
+
+    // Using arrays directly instead of CollectionUtils
+    executable = 'echo'
+    args = ['See above for Docker push instructions']
+
+    doFirst {
+        println "To push the Docker image, first set up your repository credentials"
+        println "For example, to push to AWS ECR:"
+        println "aws ecr get-login-password --region <region> | docker login --username AWS --password-stdin <account-id>.dkr.ecr.<region>.amazonaws.com"
+        println "Then tag and push your image:"
+        println "docker tag ${imageTag} <account-id>.dkr.ecr.<region>.amazonaws.com/<repo-name>:${project.version}"
+        println "docker push <account-id>.dkr.ecr.<region>.amazonaws.com/<repo-name>:${project.version}"
+    }
+}
+
+// Add a task to pull ECR repository URL from Terraform output
+task getEcrRepositoryUrl {
+    group = 'docker'
+    description = 'Gets the ECR repository URL from Terraform output'
+
+    // Store project properties at configuration time
+    def appGroup = project.group
+    def appName = rootProject.name
+    def appVersion = project.version
+    def terraformDir = file('terraform')
+
+    doLast {
+        println "Getting ECR repository URL from Terraform output..."
+
+        // Create ProcessBuilder for terraform command
+        def processBuilder = new ProcessBuilder('terraform', 'output', '-raw', 'ecr_repository_url')
+        processBuilder.directory(terraformDir)
+
+        // Capture the output
+        def process = processBuilder.start()
+        def reader = new BufferedReader(new InputStreamReader(process.getInputStream()))
+        def ecrUrl = reader.readLine()?.trim()
+        def exitCode = process.waitFor()
+
+        if (exitCode != 0) {
+            println "Terraform command failed. Make sure you've run the Terraform deploy script first."
+            return
+        }
+
+        if (ecrUrl) {
+            println "ECR Repository URL: ${ecrUrl}"
+
+            // Save ECR URL to ext property
+            ext.ecrUrl = ecrUrl
+
+            println "To push to this repository:"
+            println "1. aws ecr get-login-password --region \$(terraform -chdir=terraform output -raw aws_region 2>/dev/null || echo \"us-east-1\") | docker login --username AWS --password-stdin ${ecrUrl.split('/')[0]}"
+            println "2. docker tag ${appGroup}/${appName}:${appVersion} ${ecrUrl}:${appVersion}"
+            println "3. docker push ${ecrUrl}:${appVersion}"
+        } else {
+            println "Terraform hasn't been applied yet or there's no output available."
+            println "Run './terraform/deploy.sh' first to set up the ECR repository."
+        }
+    }
+}
+
+// A task that puts everything together for AWS deployment
+task awsDeploy {
+    group = 'deployment'
+    description = 'Builds and deploys Docker image to AWS ECR'
+
+    // Store project properties as task properties
+    def appGroup = project.group
+    def appName = rootProject.name
+    def appVersion = project.version
+
+    dependsOn buildDockerImage, getEcrRepositoryUrl
+
+    doLast {
+        // Access ecrUrl from the getEcrRepositoryUrl task
+        def ecrUrl = null
+        if (tasks.getEcrRepositoryUrl.ext.has('ecrUrl')) {
+            ecrUrl = tasks.getEcrRepositoryUrl.ext.get('ecrUrl')
+        }
+
+        if (ecrUrl != null) {
+            println """
+===== AWS Deployment Commands =====
+# Authenticate with ECR
+aws ecr get-login-password --region \$(terraform -chdir=terraform output -raw aws_region 2>/dev/null || echo "us-east-1") | docker login --username AWS --password-stdin ${ecrUrl.split('/')[0]}
+
+# Tag the Docker image
+docker tag ${appGroup}/${appName}:${appVersion} ${ecrUrl}:${appVersion}
+
+# Push the Docker image
+docker push ${ecrUrl}:${appVersion}
+===== End of Commands =====
+
+You can copy and paste these commands to complete the deployment.
+"""
+        } else {
+            println "Could not determine ECR URL. Make sure you've run the Terraform scripts first."
+        }
+    }
+}
+
+// AWS deployment task
+task deployToAWS(type: Exec) {
+    group = 'deployment'
+    description = 'Deploy the Docker image to AWS ECR'
+
+    // Store project properties as task properties
+    def appGroup = project.group
+    def appName = rootProject.name
+    def appVersion = project.version
+
+    // Using executable/args pattern instead of commandLine
+    executable = 'echo'
+    args = ['See above for AWS ECR deployment commands']
+
+    doFirst {
+        println "To deploy to AWS ECR, run the following commands manually:"
+        println "1. aws ecr get-login-password --region <your-region> | docker login --username AWS --password-stdin <your-aws-account-id>.dkr.ecr.<your-region>.amazonaws.com"
+        println "2. docker tag ${appGroup}/${appName}:${appVersion} <your-aws-account-id>.dkr.ecr.<your-region>.amazonaws.com/<repository-name>:${appVersion}"
+        println "3. docker push <your-aws-account-id>.dkr.ecr.<your-region>.amazonaws.com/<repository-name>:${appVersion}"
+    }
+}
