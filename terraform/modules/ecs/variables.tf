@@ -1,31 +1,24 @@
-variable "aws_region" {
-  description = "The AWS region to deploy resources in"
-  type        = string
-  default     = "us-east-1"
-}
-
-variable "ecr_repository_name" {
-  description = "Name of the ECR repository"
-  type        = string
-  default     = "tennis-player-rest"
-}
-
-variable "ecs_cluster_name" {
+variable "cluster_name" {
   description = "Name of the ECS cluster"
   type        = string
   default     = "tennis-player-cluster"
+}
+
+variable "aws_region" {
+  description = "AWS region to deploy resources in"
+  type        = string
+}
+
+variable "availability_zones" {
+  description = "List of availability zones to use for the subnets"
+  type        = list(string)
+  default     = ["us-east-1a", "us-east-1b"]
 }
 
 variable "container_image" {
   description = "ECR image URI for the application container"
   type        = string
   default     = "121022298217.dkr.ecr.us-east-1.amazonaws.com/tennis-player-rest:0.0.1-SNAPSHOT"
-}
-
-variable "desired_count" {
-  description = "Number of instances of the task to run"
-  type        = number
-  default     = 1
 }
 
 variable "task_cpu" {
@@ -40,12 +33,14 @@ variable "task_memory" {
   default     = 512
 }
 
+variable "desired_count" {
+  description = "Number of instances of the task to run"
+  type        = number
+  default     = 1
+}
+
 variable "tags" {
   description = "Tags to apply to resources"
   type        = map(string)
-  default = {
-    Environment = "production"
-    Project     = "tennis-player-rest"
-    ManagedBy   = "terraform"
-  }
+  default     = {}
 }
